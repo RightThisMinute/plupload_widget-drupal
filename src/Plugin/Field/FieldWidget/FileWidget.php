@@ -23,6 +23,8 @@ use Drupal\file\Entity\File;
 use Drupal\Component\Utility\Xss;
 use Drupal\file\Plugin\Field\FieldWidget\FileWidget as CoreFileWidget;
 
+use Drupal\plupload_widget\UploadConfiguration;
+
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\Validator\ConstraintViolationListInterface;
 
@@ -36,15 +38,6 @@ use Symfony\Component\Validator\ConstraintViolationListInterface;
  * )
  */
 class FileWidget extends CoreFileWidget {
-
-  protected $id;
-
-  public function getId() {
-    if (empty($this->id)) {
-      $this->id = uniqid();
-    }
-    return $this->id;
-  }
 
   /**
    * Get the optimum chunk size.
@@ -69,7 +62,6 @@ class FileWidget extends CoreFileWidget {
    * @return double|int
    */
   public function getMaxFileSize() {
-
     // We don't care about PHP's max post
     // or upload file size because we use
     // plupload.
@@ -79,14 +71,10 @@ class FileWidget extends CoreFileWidget {
   }
 
   /**
-   * {@inheritdoc}
+   * Override to replace the upload/file HTML control
+   * with the PLUPLOAD form element.
+   * 
    */
-  public function formElement(FieldItemListInterface $items, $delta, array $element, array &$form, FormStateInterface $form_state) {
-    $element = parent::formElement($items, $delta, $element, $form, $form_state);
-    $element['#replace_uploader'] = !$items[$delta]->getValue();
-    return $element;
-  }
-
   public static function process($element, FormStateInterface $form_state, $form) {
 
     $element = parent::process($element, $form_state, $form);
@@ -97,13 +85,8 @@ class FileWidget extends CoreFileWidget {
       return $element;
     }
 
-    $max_files = $element['#upload_max_files'];
-    $location = $element['#upload_location'];
-    $validators = $element['#upload_validators'];
-    $id = $element['#upload_id'];
-    $chunk_size = $form['#upload_chunk_size'];
-    $max_upload = $form['#upload_max_size'];
-    $cardinality = $form['#upload_cardinality'];
+    /** @var UploadConfiguration */
+    $configuration = unserialize($form[$element['#parents'][0]]['#upload_configuration']);
 
     // Change the element description because
     // the PLUPLOAD widget MUST have the
@@ -114,7 +97,7 @@ class FileWidget extends CoreFileWidget {
        '#theme' => 'file_upload_help',
        '#description' => '',
        '#upload_validators' => '',
-       '#cardinality' => $cardinality,
+       '#cardinality' => $configuration->cardinality,
      );
     $element['#description'] = \Drupal::service('renderer')->renderPlain($file_upload_help);
 
@@ -128,13 +111,13 @@ class FileWidget extends CoreFileWidget {
       '#autosubmit' => TRUE,
       '#submit_element' => "[name={$element['upload_button']['#name']}]",
       '#upload_validators' => [
-        'file_validate_extensions' => $validators['file_validate_extensions'],
+        'file_validate_extensions' => $configuration->validators['file_validate_extensions'],
       ],
       '#plupload_settings' => [
         'runtimes' => 'html5,flash,silverlight,html4',
-        'chunk_size' => $chunk_size . 'b',
-        'max_file_size' => $max_upload . 'b',
-        'max_file_count' => $max_files,
+        'chunk_size' => $configuration->chunk_size . 'b',
+        'max_file_size' => $configuration->max_size . 'b',
+        'max_file_count' => $configuration->max_files,
       ],
       '#event_callbacks' => [
         'FilesAdded' => 'Drupal.plupload_widget.filesAddedCallback',
@@ -153,58 +136,25 @@ class FileWidget extends CoreFileWidget {
   /**
    * {@inheritdoc}
    */
-  public static function submit($form, FormStateInterface $form_state) {
-    return parent::submit($form, $form_state);
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  protected function formMultipleElements(FieldItemListInterface $items, array &$form, FormStateInterface $form_state) {
-
-    $elements = parent::formMultipleElements($items, $form, $form_state);
-    return $elements;
-
-  }
-
-  /**
-   * {@inheritdoc}
-   */
   public function form(FieldItemListInterface $items, array &$form, FormStateInterface $form_state, $get_delta = NULL) {
 
     $element = parent::form($items, $form, $form_state, $get_delta);
 
-    $key = $items->getName() . 'widget_id';
-
-    // Store the ID in the form_state
-    if ($form_state->get($key)) {
-      $this->id = $form_state->get($key);
-    }
-    else {
-      $form_state->set($key, $this->getId());
-    }
-
     $field_definition = $this->fieldDefinition->getFieldStorageDefinition();
 
-    $cardinality = $field_definition->getCardinality();
+    // Store these seetings once for the whole widget.
+    $config = new UploadConfiguration();
+    $config->cardinality = $field_definition->getCardinality();
+    $config->upload_location = $items[0]->getUploadLocation();
+    $config->validators  = $items[0]->getUploadValidators();
+    $config->chunk_size  = $this->getChunkSize();
+    $config->max_size  = $this->getMaxFileSize();
 
-    $form['#upload_max_files'] = $cardinality != FieldStorageDefinitionInterface::CARDINALITY_UNLIMITED ? $cardinality - count($items) + 1 : -1;
-    $form['#upload_location'] = $items[0]->getUploadLocation();
-    $form['#upload_validators']  = $items[0]->getUploadValidators();
-    $form['#upload_id']  = $this->getId();
-    $form['#upload_chunk_size']  = $this->getChunkSize();
-    $form['#upload_max_size']  = $this->getMaxFileSize();
-    $form['#cardinality']  = $cardinality;
-
-    // Add a process callback...
-    $element['#after_build'] = array(array(self::class, 'formAfterBuild'));
+    $element['#upload_configuration'] = serialize($config);
 
     return $element;
   }
 
-  public static function formAfterBuild($element, FormStateInterface $form_state) {
-    return $element;
-  }
 
   /**
    * Important!! The core FILE API relies on the value callback to save the managed file,
