@@ -1,6 +1,6 @@
 (function ($) {
 
-  Drupal.plupload_widget = Drupal.plupload || {};
+  Drupal.plupload_widget = Drupal.plupload_widget || {};
 
   // Add Plupload events for autoupload and autosubmit.
   Drupal.plupload_widget.filesAddedCallback = function (up, files) {
