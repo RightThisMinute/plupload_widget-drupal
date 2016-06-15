@@ -16,7 +16,7 @@ use Drupal\Core\Render\ElementInfoManagerInterface;
 use Drupal\file\Element\ManagedFile;
 use Drupal\file\Entity\File;
 use Drupal\Component\Utility\Xss;
-use Drupal\file\Plugin\Field\FieldWidget\FileWidget as CoreFileWidget;
+use Drupal\image\Plugin\Field\FieldWidget\ImageWidget as CoreImageWidget;
 use Drupal\plupload_widget\Plugin\Field\FieldWidget\PluploadWidgetTrait;
 
 use Drupal\plupload_widget\UploadConfiguration;
@@ -26,14 +26,14 @@ use Symfony\Component\Validator\ConstraintViolationListInterface;
 
 /**
  * @FieldWidget(
- *   id = "plupload_file_widget",
+ *   id = "plupload_image_widget",
  *   label = @Translation("PLupload widget"),
  *   field_types = {
- *     "file"
+ *     "image"
  *   }
  * )
  */
-class FileWidget extends CoreFileWidget {
+class ImageWidget extends CoreImageWidget {
 
   use PluploadWidgetTrait;
 
