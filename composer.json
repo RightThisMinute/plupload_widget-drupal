@@ -1,0 +1,14 @@
+{
+    "name": "drupal/plupload_widget",
+    "description": "Provides a plupload widget.",
+    "minimum-stability": "dev",
+    "prefer-stable": true,
+    "license": "GPL-2.0-only",
+    "authors": [
+        {
+            "name": "David Garcia",
+            "homepage": "https://twitter.com/DavidGarcia2345",
+            "email": "deivid.garcia.garcia@gmail.com"
+        }
+    ]
+}
