@@ -72,7 +72,7 @@ class FileWidget extends CoreFileWidget {
     // for a single file.
     $element['upload'] = [
       '#type' => 'plupload',
-      '#title' => t('Upload files'),
+//      '#title' => t('Upload files'),
       //'#description' => t('This multi-upload widget uses Plupload library.'),
       '#autoupload' => TRUE,
       '#autosubmit' => TRUE,
